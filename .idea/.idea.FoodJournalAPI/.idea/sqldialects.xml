@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/DBScripts/Add_meal_procedure.sql" dialect="TSQL" />
+    <file url="file://$PROJECT_DIR$/DBScripts/Filter_meals_count_procedure.sql" dialect="TSQL" />
+    <file url="file://$PROJECT_DIR$/DBScripts/FoodJournal_CreateDummyData.sql" dialect="TSQL" />
+    <file url="file://$PROJECT_DIR$/DBScripts/FoodJournal_DB_reset.sql" dialect="TSQL" />
+    <file url="file://$PROJECT_DIR$/DBScripts/FoodJournal_table_create.sql" dialect="TSQL" />
+    <file url="file://$PROJECT_DIR$/Repositories/MealRepository.cs" dialect="TSQL" />
+    <file url="PROJECT" dialect="TSQL" />
+  </component>
+</project>
