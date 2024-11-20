@@ -116,7 +116,7 @@ namespace FoodJournalAPI.Repositories
             }
         }
         
-        public async Task<Guid> AddMeal(AddNewMealRequestDTO mealRequest)
+        public async Task AddMeal(AddNewMealRequestDTO mealRequest)
         {
             try
             {
@@ -128,8 +128,6 @@ namespace FoodJournalAPI.Repositories
                 {
                     await connection.ExecuteAsync("Insert_Meal_Proc", parameters,
                         commandType: CommandType.StoredProcedure);
-                    var newMealId = parameters.Get<Guid>("@NewMealID");
-                    return newMealId;
                 }
             }
             catch (DbException exception)
@@ -138,9 +136,43 @@ namespace FoodJournalAPI.Repositories
             }
         }
 
-        public Task<Guid> UpdateMeal(UpdateMealRequestDTO updateMealRequestDto)
+        public async Task UpdateMeal(UpdateMealRequestDTO updateMealRequestDto)
         {
-            throw new NotImplementedException();
+            try
+            {
+                var updateMealQuery = "Update m SET m.MealName = @MealName, m.MealType = @MealType FROM Meal m WHERE m.MealID = @MealId";
+                var parameters = new DynamicParameters();
+                parameters.Add("@MealName", updateMealRequestDto.MealName);
+                parameters.Add("@MealType", updateMealRequestDto.MealType);
+                parameters.Add("@MealId", updateMealRequestDto.MealID);
+                using (var connection = _context.GetDbConnection())
+                {
+                    connection.Open();
+                    using (var transaction = connection.BeginTransaction())
+                    {
+                        try
+                        {
+                            await connection
+                                .ExecuteAsync(
+                                    updateMealQuery,
+                                    parameters,
+                                    transaction
+                                );
+                            transaction.Commit();
+                        }
+                        catch (DbException exception)
+                        {
+                            transaction.Rollback();
+                            throw new Exception(exception.Message);
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
         }
     }
 }

@@ -10,8 +10,7 @@ namespace FoodJournalAPI.Contracts
         public Task<PaginatedList<MealResponseDTO>> GetMeals(MealFilterOptions mealFilterOptions);
         public Task<MealResponseDTO> GetMeal(Guid mealId);
         public Task DeleteMeal(Guid mealId);
-        public Task<Guid> AddMeal(AddNewMealRequestDTO addMealRequestDto);
-
-        public Task<Guid> UpdateMeal(UpdateMealRequestDTO updateMealRequestDto);
-    }
+        public Task AddMeal(AddNewMealRequestDTO addMealRequestDto);
+        public Task UpdateMeal(UpdateMealRequestDTO updateMealRequestDto);
+    }       
 }

@@ -81,13 +81,38 @@ namespace FoodJournalAPI.Controllers
             }
             try
             {
-                var newMealId = await _mealRepository.AddMeal(addNewMealRequestDto);
-                var latestMeal = await _mealRepository.GetMeal(newMealId);
-                return Ok(latestMeal);
+                await _mealRepository.AddMeal(addNewMealRequestDto);
+                return NoContent();
             }
             catch (Exception e)
             {
                 throw new Exception(e.Message); 
+            }
+        }
+        
+        [HttpPut]
+        [Route("updateMeal")]
+        public async Task<IActionResult> UpdateMeal([FromBody] UpdateMealRequestDTO updateMealRequestDto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelStateErrorMessageGenerator.ModelStateErrorMessage(ModelState));
+            }
+
+            try
+            {
+                var meal = await _mealRepository.GetMeal(updateMealRequestDto.MealID!.Value);
+                if (meal == null)
+                {
+                    return NotFound();
+                }
+
+                await _mealRepository.UpdateMeal(updateMealRequestDto);
+                return NoContent();
+            }
+            catch (Exception e)
+            {
+                throw new Exception(e.Message);
             }
         }
     }
