@@ -18,36 +18,55 @@ AS
 		DECLARE @GetMealFilterRecordsSql NVARCHAR(MAX);
 		DECLARE @filterAppliedPerFood BIT = 0;
 		DECLARE @SortColumnName NVARCHAR(MAX);
-		SET @dynamicMealFilterCountSql = N'SELECT @FilterMealCount = COUNT(DISTINCT m.MealID) FROM [dbo].Meal m LEFT JOIN [dbo].FoodMeal fm ON m.MealID = fm.MealID LEFT JOIN [dbo].Food f ON fm.FoodID = f.FoodID WHERE 1=1';
-		SET @MealFilterRecordsSql = N'INSERT INTO #tmpResultMeals SELECT m.MealID, CAST(m.MealName AS VARCHAR), m.MealType, COUNT(f.FoodID) as foodCount, FORMAT(CAST(m.MealAddedDate AS DATETIME2), ''yyyy-MM-dd HH:mm'') FROM [dbo].Meal m LEFT JOIN [dbo].FoodMeal fm ON m.MealID = fm.MealID LEFT JOIN [dbo].Food f ON fm.FoodID = f.FoodID WHERE 1=1';
-		SET @GetMealFilterRecordsSql = N'SELECT * FROM #tmpResultMeals m ORDER BY';
-		IF @FoodName IS NOT NULL OR @FoodType IS NOT NULL
-			BEGIN
-				SET @filterAppliedPerFood = 1;
-				IF @FoodName IS NOT NULL
-					BEGIN
-						SET @dynamicMealFilterCountSql += ' AND LOWER(f.FoodName) LIKE ''' + LOWER(@FoodName) + '%''';
-						SET @MealFilterRecordsSql += ' AND LOWER(f.FoodName) LIKE ''' + LOWER(@FoodName) + '%''';
-					END
-				IF @FoodType IS NOT NULL
-					BEGIN
-						SET @dynamicMealFilterCountSql += ' AND LOWER(f.FoodType) = LOWER(@FoodType)';
-						SET @MealFilterRecordsSql += ' AND LOWER(f.FoodType) = LOWER(@FoodType)';
-					END
-			END
-		IF @MealName IS NOT NULL OR @MealType IS NOT NULL
-		BEGIN
-			IF @MealName IS NOT NULL
-			BEGIN
-				SET @dynamicMealFilterCountSql += ' AND LOWER(CAST(m.MealName AS VARCHAR)) LIKE ''' + LOWER(@MealName) + '%''';
-				SET @MealFilterRecordsSql += ' AND LOWER(CAST(m.MealName AS VARCHAR)) LIKE ''' + LOWER(@MealName) + '%''';
-			END
-			IF @MealType IS NOT NULL
-			BEGIN
-				SET @dynamicMealFilterCountSql += ' AND LOWER(m.MealType) = LOWER(@MealType)';
-				SET @MealFilterRecordsSql += ' AND LOWER(m.MealType) = LOWER(@MealType)';
-			END
-		END
+		
+		SET @FilterMealCount = (
+			SELECT COUNT(DISTINCT m.MealID) 
+			FROM [dbo].Meal m LEFT JOIN [dbo].FoodMeal fm 
+			ON m.MealID = fm.MealID LEFT JOIN [dbo].Food f 
+			ON fm.FoodID = f.FoodID WHERE 1=1
+			AND (
+				CASE
+					WHEN @FoodName IS NOT NULL THEN 
+						CASE 
+							WHEN LOWER(CAST(f.FoodName AS VARCHAR)) 
+							LIKE LOWER(CAST(@FoodName AS VARCHAR)) + '%' THEN 1 
+							ELSE 0
+						END
+					ELSE 1
+			END) = 1
+			AND (
+				CASE
+					WHEN @FoodType IS NOT NULL THEN 
+						CASE 
+							WHEN LOWER(CAST(f.FoodType AS VARCHAR)) 
+							= LOWER(CAST(@FoodType AS VARCHAR)) THEN 1 
+							ELSE 0
+						END
+					ELSE 1
+			END) = 1
+			AND (
+				CASE
+					WHEN @MealName IS NOT NULL THEN 
+						CASE 
+							WHEN LOWER(CAST(m.MealName AS VARCHAR)) 
+							LIKE LOWER(CAST(@MealName AS VARCHAR)) + '%' THEN 1 
+							ELSE 0
+						END
+					ELSE 1
+			END) = 1
+			AND (
+				CASE
+					WHEN @MealType IS NOT NULL THEN 
+						CASE 
+							WHEN LOWER(CAST(m.MealType AS VARCHAR)) 
+							= LOWER(CAST(@MealType AS VARCHAR)) THEN 1 
+							ELSE 0
+						END
+					ELSE 1
+			END) = 1
+		)
+
+		SELECT @FilterMealCount;
 
 		BEGIN
 			DROP TABLE IF EXISTS #tmpResultMeals;
@@ -59,103 +78,112 @@ AS
 				MealAddedDate NVARCHAR(50),	
 			)
 		END
+
 		BEGIN
-		    SET @MealFilterRecordsSql += ' GROUP BY m.MealID, CAST(m.MealName AS VARCHAR), m.MealType, FORMAT(CAST(m.MealAddedDate AS DATETIME2), ''yyyy-MM-dd HH:mm'')';
-			IF @SortColumn IS NULL
-			BEGIN
-				SET @SortColumn = 'AddDate'
-			END
-			IF @SortOrder IS NULL
-			BEGIN
-				SET @SortOrder = 'ASC'
-			END
-
-			IF @SortColumn = 'AddDate'
-			BEGIN
-				SET @GetMealFilterRecordsSql += ' m.MealAddedDate';
-			END
-
-			ELSE IF @SortColumn = 'MealName'
-			BEGIN
-				SET @GetMealFilterRecordsSql += ' CAST(m.MealName AS VARCHAR)';
-			END
-
-			ELSE IF @SortColumn = 'MealType'
-			BEGIN
-				SET @GetMealFilterRecordsSql += ' m.MealType';
-			END
-
-			ELSE IF @SortColumn = 'FoodCount'
-			BEGIN
-				SET @GetMealFilterRecordsSql += ' foodCount';
-			END
-		END
-		BEGIN
-			SET @GetMealFilterRecordsSql += ' ' + @SortOrder;
-		END
-
-		PRINT @MealFilterRecordsSql
-		PRINT @dynamicMealFilterCountSql
-		EXEC sp_executesql @dynamicMealFilterCountSql, 
-        N'@MealName VARCHAR(MAX), @MealType VARCHAR(30), @FoodName VARCHAR(50), @FoodType VARCHAR(30), @FilterMealCount INT OUTPUT', 
-        @MealName=@MealName, @MealType=@MealType, @FoodName= @FoodName, @FoodType=@FoodType, @FilterMealCount=@FilterMealCount OUTPUT;
-
-		DECLARE @Offset INT
-		BEGIN
-			IF @PageSize IS NULL OR @PageSize <= 0
-			BEGIN
-				SET @PageSize = 10
-			END
-
-			--how many items we will skip (offset)
-			DECLARE @ItemsToSkip INT = @CurPage * @PageSize
-			SET @Offset = @ItemsToSkip
-
-			--skip more items than total items in table
-			--limit to only max items in table
-			IF @Offset >= @FilterMealCount
-			BEGIN
-				SET @Offset = @FilterMealCount
-			END
-
-			--how many rows will we fetch
+			DECLARE @SkippedItems INT = (@PageSize * @CurPage)
 			DECLARE @FetchedRows INT
-
-			--rows we skip + rows will wnat to fetch is larger than total number of rows
-			IF @Offset + @PageSize > @FilterMealCount
+			IF @SkippedItems >= @FilterMealCount
 			BEGIN
-			--limit rows we want to fetch to remaining number of rows (page 1, total: 19, skip: 10)
-			--so we only want to fetch 9 rows. 19 - offset = 19 - 10 = 9
-				SET @FetchedRows = @FilterMealCount - @Offset
-			END
-			ELSE
-			BEGIN
-			-- fetch normally if we have enough rows
-				SET @FetchedRows = @PageSize
+				SET @SkippedItems = @FilterMealCount
 			END
 
-			IF @FetchedRows = 0
-			BEGIN
-			SET @CurPage = 0
-			SET @FetchedRows = @PageSize
-			SET @Offset = 0
+			BEGIN 
+				IF @SkippedItems + @PageSize > @FilterMealCount	
+				BEGIN
+					SET @FetchedRows = @FilterMealCount - @SkippedItems
+					IF @FetchedRows = 0
+					BEGIN
+						SET @CurPage = 0
+						SET @FetchedRows = 0
+						SET @SkippedItems = 0
+					END
+				END
+				ELSE
+				BEGIN
+					SET @FetchedRows = @PageSize
+				END
 			END
-			SET @MealFilterRecordsSql += ' ORDER BY FORMAT(CAST(m.MealAddedDate AS DATETIME2), ''yyyy-MM-dd HH:mm'') OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY';
-
 		END
 
-		PRINT @CurPage
 
-		EXEC sp_executesql  @MealFilterRecordsSql,
-		N'@MealName VARCHAR(MAX), @MealType VARCHAR(30), @FoodName VARCHAR(50), @FoodType VARCHAR(30), @Offset INT, @PageSize INT',
-		@MealName=@MealName, @MealType=@MealType, @FoodName=@FoodName, @FoodType=@FoodType, @Offset=@Offset, @PageSize=@FetchedRows;
+		INSERT INTO #tmpResultMeals 
+		SELECT m.MealID, 
+		CAST(m.MealName AS VARCHAR), 
+		m.MealType, 
+		(
+			SELECT COUNT(sf.FoodID) 
+			AS foodCount 
+			FROM [dbo].Meal sm 
+			LEFT JOIN [dbo].FoodMeal sfm ON sm.MealID = sfm.MealID
+			LEFT JOIN [dbo].Food sf ON sfm.FoodID = sf.FoodID
+			WHERE sm.MealID = m.MealID
+			GROUP BY sm.MealID
+		) AS foodCount, 
+		FORMAT(CAST(m.MealAddedDate AS DATETIME2), 'yyyy-MM-dd HH:mm') 
+		FROM [dbo].Meal m 
+		LEFT JOIN [dbo].FoodMeal fm ON m.MealID = fm.MealID 
+		LEFT JOIN [dbo].Food f ON fm.FoodID = f.FoodID WHERE 1=1
+		AND (
+		CASE
+		WHEN @FoodName IS NOT NULL THEN 
+			CASE 
+				WHEN LOWER(CAST(f.FoodName AS VARCHAR)) 
+				LIKE LOWER(CAST(@FoodName AS VARCHAR)) + '%' THEN 1 
+				ELSE 0
+			END
+		ELSE 1
+		END) = 1
+		AND (
+			CASE
+				WHEN @FoodType IS NOT NULL THEN 
+					CASE 
+						WHEN LOWER(CAST(f.FoodType AS VARCHAR)) 
+						= LOWER(CAST(@FoodType AS VARCHAR)) THEN 1 
+						ELSE 0
+					END
+				ELSE 1
+		END) = 1
+		AND (
+			CASE
+				WHEN @MealName IS NOT NULL THEN 
+					CASE 
+						WHEN LOWER(CAST(m.MealName AS VARCHAR)) 
+						LIKE LOWER(CAST(@MealName AS VARCHAR)) + '%' THEN 1 
+						ELSE 0
+					END
+				ELSE 1
+		END) = 1
+		AND (
+			CASE
+				WHEN @MealType IS NOT NULL THEN 
+					CASE 
+						WHEN LOWER(CAST(m.MealType AS VARCHAR)) 
+						= LOWER(CAST(@MealType AS VARCHAR)) THEN 1 
+						ELSE 0
+					END
+				ELSE 1
+		END) = 1
+		GROUP BY m.MealID, 
+		CAST(m.MealName AS VARCHAR), 
+		m.MealType, 
+		FORMAT(CAST(m.MealAddedDate AS DATETIME2), 'yyyy-MM-dd HH:mm') 
 
-		EXEC sp_executesql  @GetMealFilterRecordsSql,
-		N'@MealName VARCHAR(MAX), @MealType VARCHAR(30), @FoodName VARCHAR(50), @FoodType VARCHAR(30), @SortOrder VARCHAR(5), @Offset INT, @PageSize INT',
-		@MealName=@MealName, @MealType=@MealType, @FoodName=@FoodName, @FoodType=@FoodType, @SortOrder=@SortOrder, @Offset=@Offset, @PageSize=@FetchedRows;
+		ORDER BY FORMAT(CAST(m.MealAddedDate AS DATETIME2), 'yyyy-MM-dd HH:mm')  ASC OFFSET @SkippedItems ROWS FETCH NEXT @FetchedRows ROWS ONLY;
+
+		SELECT * FROM #tmpResultMeals t
+		ORDER BY 
+			CASE WHEN @SortColumn = 'MealName' AND @SortOrder = 'DESC' THEN CAST(MealName AS VARCHAR) END DESC,
+			CASE WHEN @SortColumn = 'MealName' AND @SortOrder = 'ASC' THEN CAST(MealName AS VARCHAR) END ASC,
+			CASE WHEN @SortColumn = 'MealType' AND @SortOrder = 'DESC' THEN MealType END DESC,
+			CASE WHEN @SortColumn = 'MealType' AND @SortOrder = 'ASC' THEN MealType END ASC,
+			CASE WHEN @SortColumn = 'FoodCount' AND @SortOrder = 'DESC' THEN FoodCount END DESC,
+			CASE WHEN @SortColumn = 'FoodCount' AND @SortOrder = 'ASC' THEN FoodCount END ASC,
+			CASE WHEN @SortColumn = 'AddDate' AND @SortOrder = 'DESC' THEN  MealAddedDate END DESC,
+			CASE WHEN @SortColumn = 'AddDate' AND @SortOrder = 'ASC' THEN MealAddedDate END ASC
+
 	END
 GO
 
 DECLARE @FilterCount INT
 DECLARE @CurPage INT = 0
-EXEC Filter_Meals_Count_Proc NULL, NULL, NULL, NULL, 'MealName', 'ASC', @CurPage OUTPUT, 1 , @FilterCount OUTPUT;
+EXEC Filter_Meals_Count_Proc 'Meal 3' , 'Breakfast', NULL, NULL , 'MealType', 'DESC', @CurPage OUTPUT, 5 , @FilterCount OUTPUT;

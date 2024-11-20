@@ -35,13 +35,11 @@ BEGIN TRY
 			SET @Food2Id = (SELECT FoodID FROM [dbo].Food f WHERE f.FoodName = 'Fish');  
 			INSERT INTO [dbo].FoodMeal (MealID, FoodID, FoodQuantity) VALUES (@SampleMealId, @Food1Id, 1);
 			INSERT INTO [dbo].FoodMeal (MealID, FoodID, FoodQuantity) VALUES (@SampleMealId, @Food2Id, 2);
-			INSERT INTO [dbo].FoodMeal (MealID, FoodID, FoodQuantity) VALUES (@SampleMealId, @Food3Id, 3);
 			SET @SampleMealId = (SELECT MealID FROM [dbo].Meal m WHERE CAST(m.MealName AS VARCHAR(MAX)) = 'Meal 5');
 			SET @Food1Id = (SELECT FoodID FROM [dbo].Food f WHERE f.FoodName = 'Chicken'); 
 			SET @Food2Id = (SELECT FoodID FROM [dbo].Food f WHERE f.FoodName = 'Fish');  
 			INSERT INTO [dbo].FoodMeal (MealID, FoodID, FoodQuantity) VALUES (@SampleMealId, @Food1Id, 1);
 			INSERT INTO [dbo].FoodMeal (MealID, FoodID, FoodQuantity) VALUES (@SampleMealId, @Food2Id, 2);
-			INSERT INTO [dbo].FoodMeal (MealID, FoodID, FoodQuantity) VALUES (@SampleMealId, @Food3Id, 3);
 		END
 	COMMIT TRANSACTION
 END TRY
