@@ -66,8 +66,6 @@ AS
 			END) = 1
 		)
 
-		SELECT @FilterMealCount;
-
 		BEGIN
 			DROP TABLE IF EXISTS #tmpResultMeals;
 			CREATE TABLE #tmpResultMeals (
@@ -94,7 +92,7 @@ AS
 					IF @FetchedRows = 0
 					BEGIN
 						SET @CurPage = 0
-						SET @FetchedRows = 0
+						SET @FetchedRows = @PageSize
 						SET @SkippedItems = 0
 					END
 				END
@@ -185,5 +183,5 @@ AS
 GO
 
 DECLARE @FilterCount INT
-DECLARE @CurPage INT = 0
-EXEC Filter_Meals_Count_Proc 'Meal 3' , 'Breakfast', NULL, NULL , 'MealType', 'DESC', @CurPage OUTPUT, 5 , @FilterCount OUTPUT;
+DECLARE @CurPage INT = 2
+EXEC Filter_Meals_Count_Proc NULL , NULL, NULL, NULL ,'MealName', 'DESC', @CurPage OUTPUT, 5 , @FilterCount OUTPUT;
