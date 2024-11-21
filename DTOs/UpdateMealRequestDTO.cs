@@ -11,7 +11,7 @@ public class UpdateMealRequestDTO
     public string? MealName { get; set; }
 
     [Required(ErrorMessage = "Meal Type is required")]
-    [MinLength(5, ErrorMessage = "Meal name has to be at least 5 characters")]
-    [MaxLength(20, ErrorMessage = "Meal name cannot be longer than 20 characters")]
+    [MinLength(5, ErrorMessage = "Meal type has to be at least 5 characters")]
+    [MaxLength(20, ErrorMessage = "Meal type cannot be longer than 20 characters")]
     public string? MealType { get; set; }
 }

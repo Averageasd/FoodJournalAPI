@@ -14,7 +14,7 @@ namespace FoodJournalAPI.DapperContext
             _connectionString = _configuration.GetConnectionString("devConnection");
         }
 
-        public IDbConnection GetDbConnection()
+        public virtual IDbConnection GetDbConnection()
         {
             return new SqlConnection(_connectionString);
         }

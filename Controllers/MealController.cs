@@ -77,7 +77,7 @@ namespace FoodJournalAPI.Controllers
 
             if (!_mealValidation.IsMealTypeValid(addNewMealRequestDto.MealType!))
             {
-                return BadRequest("Meal type must be Breakfast, Dinner, Lunch Or Snack!");
+                return BadRequest(CustomErrorMessages.InvalidMealType);
             }
             try
             {
@@ -97,6 +97,11 @@ namespace FoodJournalAPI.Controllers
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelStateErrorMessageGenerator.ModelStateErrorMessage(ModelState));
+            }
+
+            if (!_mealValidation.IsMealTypeValid(updateMealRequestDto.MealType!))
+            {
+                return BadRequest(CustomErrorMessages.InvalidMealType);
             }
 
             try

@@ -15,7 +15,7 @@ namespace FoodJournalAPI.Repositories
 
         public MealRepository(Context dapperContext)
         {
-            _context = dapperContext;
+            _context = dapperContext;   
         }
         
         public async Task<PaginatedList<MealResponseDTO>> GetMeals(MealFilterOptions mealFilterOptions)
